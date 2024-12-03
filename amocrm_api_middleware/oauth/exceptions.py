@@ -1,18 +1,24 @@
+from typing import Optional, Dict, Any
+
 class OAuthError(Exception):
     """Основная ошибка при взаимодействии с OAuth 2.0."""
     pass
 
 
 class OAuthTokenNotFoundError(OAuthError):
+    """Ошибка при отсутствии токена."""
     pass
 
 
 class OAuthLongTermTokenExpired(OAuthError):
+    """Ошибка при истечении срока действия долгосрочного токена."""
     pass
 
 
 class OAuthAccessTokenExpired(OAuthError):
+    """Ошибка при истечении срока действия access-токена."""
     pass
+
 
 class OAuthInvalidRequestError(OAuthError):
     """Ошибка, возникающая при неправильном запросе к OAuth серверу.
@@ -22,12 +28,14 @@ class OAuthInvalidRequestError(OAuthError):
     """
     pass
 
+
 class OAuthInvalidTokenError(OAuthError):
     """Ошибка, возникающая при некорректном или истекшем токене.
 
     Это может быть связано с истечением срока действия токена или его недействительностью.
     """
     pass
+
 
 class OAuthAuthorizationError(OAuthError):
     """Ошибка, связанная с ошибкой авторизации.
@@ -36,6 +44,7 @@ class OAuthAuthorizationError(OAuthError):
     """
     pass
 
+
 class OAuthTokenExchangeError(OAuthError):
     """Ошибка при обмене кода авторизации на токен.
 
@@ -43,12 +52,14 @@ class OAuthTokenExchangeError(OAuthError):
     """
     pass
 
+
 class OAuthConnectionError(OAuthError):
     """Ошибка соединения с OAuth сервером.
 
-    Это может происходить из-за проблем с сетевым соединением или временной недоступности сервера.
+    Это может происходить из-за проблем с сетевым соединением или временной недоступностью сервера.
     """
     pass
+
 
 class OAuthScopeError(OAuthError):
     """Ошибка, связанная с недостаточными правами доступа (scope).
@@ -56,5 +67,3 @@ class OAuthScopeError(OAuthError):
     Возникает, когда запрашиваемый scope не соответствует нужным правам для выполнения операции.
     """
     pass
-
-

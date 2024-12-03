@@ -1,6 +1,4 @@
-import hashlib
 import base64
-import hmac
 import json
 from datetime import datetime
 

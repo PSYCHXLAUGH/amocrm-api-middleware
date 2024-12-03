@@ -1,5 +1,3 @@
-# amocrm_api/webhook_parser/exceptions.py
-
 class WebhookSignatureError(Exception):
     """Ошибка при проверке подписи webhook."""
     pass

@@ -175,7 +175,7 @@ class OAuthClient:
         return response.json()
 
 
-    def is_token_expired(self, token) -> bool:
+    def is_token_expired(self, token) -> Optional[bool, None]:
         if token is None:
             return None
 
