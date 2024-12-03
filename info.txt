@@ -1,0 +1,641 @@
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..5287864
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,3 @@
++.idea
++/examples/
++/poetry.lock
+diff --git a/amocrm_api_client/__init__.py b/amocrm_api_client/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/amocrm_api_client/_utils.py b/amocrm_api_client/_utils.py
+new file mode 100644
+index 0000000..ae2c3ea
+--- /dev/null
++++ b/amocrm_api_client/_utils.py
+@@ -0,0 +1,82 @@
++import hashlib
++import base64
++import hmac
++import json
++from datetime import datetime
++
++def _get_current_date() -> str:
++    """
++    Получение текущей даты в формате RFC2822.
++    """
++    return datetime.now().strftime('%a, %d %b %Y %H:%M:%S %z')
++
++def _decode_jwt(token: str) -> dict:
++    """
++    Декодирует JWT токен без проверки подписи и возвращает полезную нагрузку.
++
++    Параметры:
++        token (str): JWT токен, который нужно расшифровать.
++
++    Возвращаемое значение:
++        dict: Данные (payload) из JWT токена.
++
++    Исключения:
++        ValueError: Если токен имеет некорректный формат.
++    """
++    try:
++        # Разделяем токен на три части (header, payload, signature)
++        header_b64, payload_b64, signature_b64 = token.split(".")
++
++        # Декодируем base64url строку в байты, затем в строку JSON
++        payload_json = base64.urlsafe_b64decode(payload_b64 + "==").decode("utf-8")
++
++        # Преобразуем JSON в Python объект (словарь)
++        payload = json.loads(payload_json)
++        return payload
++
++    except ValueError as e:
++        print("Ошибка декодирования JWT токена:", e)
++        raise
++
++
++def _decode_timestamp(timestamp: int) -> str:
++    """
++    Декодирует временную метку (timestamp) в строку формата 'YYYY-MM-DD HH:MM:SS'.
++
++    Параметры:
++        timestamp (int): Временная метка (количество секунд с 1 января 1970 года).
++
++    Возвращаемое значение:
++        str: Читаемая строка с датой и временем.
++    """
++    # Преобразуем временную метку в объект datetime
++    decoded_time = datetime.utcfromtimestamp(timestamp)
++
++    # Форматируем объект datetime в строку
++    return decoded_time.strftime('%Y-%m-%d %H:%M:%S')
++
++
++def _compare_timestamp_with_current(timestamp: int) -> bool:
++    """
++    Сравнивает временную метку с текущим временем.
++
++    Параметры:
++        timestamp (int): Временная метка, которую нужно сравнить с текущим временем.
++
++    Возвращаемое значение:
++        str: Результат сравнения (больше, меньше, равно).
++    """
++    # Декодируем временную метку
++    decoded_time = _decode_timestamp(timestamp)
++
++    # Получаем текущее время в формате UTC
++    current_time = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
++
++    # Сравниваем временную метку с текущим временем
++    if decoded_time < current_time:
++        "Временная метка меньше текущего времени."
++        return True
++
++    elif decoded_time >= current_time:
++        "Временная метка больше или равна текущему времени."
++        return False
+\ No newline at end of file
+diff --git a/amocrm_api_client/oauth/__client.py b/amocrm_api_client/oauth/__client.py
+new file mode 100644
+index 0000000..9323a47
+--- /dev/null
++++ b/amocrm_api_client/oauth/__client.py
+@@ -0,0 +1,179 @@
++import requests
++from typing import Dict, Optional
++from .exceptions import OAuthError
++from .config import OAuthConfig
++from .._utils import _decode_jwt, _compare_timestamp_with_current
++
++class OAuthClient:
++    """
++    Основной клиент для работы с OAuth 2.0 API amocrm.
++    """
++
++    def __init__(self, config: OAuthConfig):
++        """
++        Инициализация клиента OAuth.
++
++        Параметры:
++            config (OAuthConfig): Конфигурация OAuth для клиента.
++        """
++
++        self.config: OAuthConfig = config
++        self.access_token: Optional[str] = None
++        self.refresh_token: Optional[str] = None
++        self.longlive_token: Optional[str] = None
++        self.api_key: Optional[str] = None
++        self.base_url: Optional[str] = None
++
++
++    def get_authorization_button(self):
++        pass
++
++
++    def get_authorization_url(self, state: Optional[str] = None, mode: Optional[str] = None) -> str:
++        """
++        Генерирует URL для получения авторизационного кода.
++
++        Параметры:
++            state (Optional[str]): Необязательный параметр, который будет передан в запрос.
++            mode (Optional[str]): Необязательный параметр, который будет передан в запрос, если state не указан.
++
++        Возвращаемое значение:
++            str: Сгенерированный URL для авторизации.
++        """
++        # Начальная часть URL
++        authorization_url: str = f"https://www.amocrm.ru/oauth?client_id={self.config.client_id}"
++
++        # Добавляем параметр state, если он передан
++        if state:
++            authorization_url += f"&state={state}"
++
++        # Добавляем параметр mode, если state не был передан
++        if mode:
++            authorization_url += f"&mode={mode}"
++
++        return authorization_url
++
++    def exchange_api_key(self) -> str:
++        """
++        Метод позволяет обменять API ключ на код авторизации OAuth.
++        Код авторизации будет отправлен на указанный в интеграции
++        Redirect Uri с дополнительным GET-параметром from_exchange=1.
++
++        Возвращаемое значение:
++            str: Ключ авторизации (пока не реализовано).
++        """
++        pass
++
++    def set_oauth_secrets(self, access_token, refresh_token, subdomain) -> bool:
++
++        self.base_url = f"https://{subdomain}.amocrm.ru"
++        self.access_token = access_token
++        self.refresh_token = refresh_token
++
++        pass
++
++    def set_longlive_token(self, longlive_token: str, subdomain: str) -> bool:
++
++        self.base_url = f"https://{subdomain}.amocrm.ru"
++        self.longlive_token = longlive_token
++
++        pass
++
++    def get_access_token(self, authorization_code: str, subdomain: str) -> Dict[str, str]:
++        """
++        Обмен авторизационного кода на токен доступа.
++
++        Параметры:
++            authorization_code (str): Код авторизации, полученный от сервера.
++            subdomain (str): Поддомен учетной записи AmoCRM.
++
++        Возвращаемое значение:
++            Dict[str, str]: Словарь с данными токенов (access_token, refresh_token).
++        """
++        self.base_url = f"https://{subdomain}.amocrm.ru"
++        url: str = f"{self.base_url}/oauth2/access_token"
++
++        data: Dict[str, str] = {
++            "client_id": self.config.client_id,
++            "client_secret": self.config.client_secret,
++            "redirect_uri": self.config.redirect_uri,
++            "code": authorization_code,
++            "grant_type": "authorization_code",
++        }
++
++        response = requests.post(url, data=data)
++        if response.status_code != 200:
++            raise OAuthError(f"Failed to get access token: {response.text}")
++
++        token_data: Dict[str, str] = response.json()
++        self.access_token = token_data["access_token"]
++        self.refresh_token = token_data.get("refresh_token")
++        return token_data
++
++    def _refresh_access_token(self) -> Dict[str, str]:
++        """
++        Обновление токена доступа с использованием refresh токена.
++
++        Возвращаемое значение:
++            Dict[str, str]: Словарь с обновленным токеном доступа и возможным refresh токеном.
++        """
++        if not self.refresh_token:
++            raise OAuthError("No refresh token available")
++
++        data: Dict[str, str] = {
++            "client_id": self.config.client_id,
++            "client_secret": self.config.client_secret,
++            "grant_type": "refresh_token",
++            "refresh_token": self.refresh_token
++        }
++
++        response = requests.post(self.config.token_url, data=data)
++        if response.status_code != 200:
++            raise OAuthError(f"Failed to refresh access token: {response.text}")
++
++        token_data: Dict[str, str] = response.json()
++        self.access_token = token_data["access_token"]
++        self.refresh_token = token_data.get("refresh_token")
++        return token_data
++
++    def _make_authenticated_request(self, endpoint: str, method: str = "GET", data: Optional[Dict[str, str]] = None) -> Dict[str, str]:
++        """
++        Выполнение запросов к API с использованием access token.
++
++        Параметры:
++            endpoint (str): URL-адрес эндпоинта для запроса.
++            method (str, optional): HTTP-метод запроса. По умолчанию "GET".
++            data (Optional[Dict[str, str]], optional): Данные для отправки в теле запроса, если используется метод "POST".
++
++        Возвращаемое значение:
++            Dict[str, str]: Ответ от сервера в виде JSON-словаря.
++        """
++
++        headers: Dict[str, str] = {
++            "Authorization": f"Bearer {self.longlive_token if self.longlive_token else self.access_token}",
++            "Content-Type": "application/json"
++        }
++
++        url: str = f"{self.base_url}/{endpoint}"
++
++        # TODO: Добавить еще методов
++
++        if method == "GET":
++            response = requests.get(url, headers=headers)
++        elif method == "POST":
++            response = requests.post(url, headers=headers, json=data)
++
++        if response.status_code != 200:
++            raise OAuthError(f"Failed to make request to {url}: {response.text}")
++
++        return response.json()
++
++
++    def is_token_expired(self, token) -> bool:
++        if token is None:
++            return None
++
++        jwt = _decode_jwt(token)
++        jwt_exp = jwt.get('exp')
++
++        return _compare_timestamp_with_current(jwt_exp)
+diff --git a/amocrm_api_client/oauth/__init__.py b/amocrm_api_client/oauth/__init__.py
+new file mode 100644
+index 0000000..ca4bb93
+--- /dev/null
++++ b/amocrm_api_client/oauth/__init__.py
+@@ -0,0 +1,4 @@
++from .config import OAuthConfig
++from.exceptions import OAuthError
++from .factory import OAuthFactory
++from middleware import OAuthMiddleware
+\ No newline at end of file
+diff --git a/amocrm_api_client/oauth/config.py b/amocrm_api_client/oauth/config.py
+new file mode 100644
+index 0000000..3ce315c
+--- /dev/null
++++ b/amocrm_api_client/oauth/config.py
+@@ -0,0 +1,31 @@
++import os
++from dataclasses import dataclass
++
++@dataclass
++class OAuthConfig:
++    """
++    Класс конфигурации OAuth 2.0 для интеграции с AmoCRM API.
++
++    Этот класс используется для хранения параметров, необходимых для аутентификации и работы с API AmoCRM через OAuth 2.0.
++    Он позволяет задать параметры, такие как `client_id`, `client_secret`, `redirect_uri`, а также автоматически
++    загружать их из переменных окружения, если они не были явно указаны.
++
++    Атрибуты:
++        client_id (str): Идентификатор клиента OAuth, необходимый для аутентификации. Может быть загружен из
++                         переменной окружения `AMOCRM_CLIENT_ID`, если не указан явно.
++        client_secret (str): Секрет клиента OAuth, используемый для аутентификации. Может быть загружен из
++                             переменной окружения `AMOCRM_CLIENT_SECRET`, если не указан явно.
++        redirect_uri (str): URL, на который будет перенаправлен пользователь после успешной аутентификации.
++                            Может быть загружен из переменной окружения `AMOCRM_REDIRECT_URI`, если не указан явно.
++        auth_url (str): URL для аутентификации через OAuth. По умолчанию: "https://www.amocrm.ru/oauth".
++        token_url (str): URL для получения токенов OAuth. По умолчанию: "https://www.amocrm.ru/oauth2/access_token".
++        api_url (str): URL для работы с API AmoCRM. По умолчанию: "https://api.amocrm.ru/v4".
++
++    Методы:
++        __post_init__: Проверяет, установлены ли значения для обязательных атрибутов (`client_id`, `client_secret`,
++                        `redirect_uri`). Если нет, пытается загрузить их из переменных окружения.
++    """
++
++    client_id: str = ""
++    client_secret: str = ""
++    redirect_uri: str = ""
+diff --git a/amocrm_api_client/oauth/exceptions.py b/amocrm_api_client/oauth/exceptions.py
+new file mode 100644
+index 0000000..25963f0
+--- /dev/null
++++ b/amocrm_api_client/oauth/exceptions.py
+@@ -0,0 +1,46 @@
++class OAuthError(Exception):
++    """Основная ошибка при взаимодействии с OAuth 2.0."""
++    pass
++
++class OAuthInvalidRequestError(OAuthError):
++    """Ошибка, возникающая при неправильном запросе к OAuth серверу.
++
++    Это может включать случаи, когда запрос не содержит необходимых параметров
++    или когда параметры запроса неверны.
++    """
++    pass
++
++class OAuthInvalidTokenError(OAuthError):
++    """Ошибка, возникающая при некорректном или истекшем токене.
++
++    Это может быть связано с истечением срока действия токена или его недействительностью.
++    """
++    pass
++
++class OAuthAuthorizationError(OAuthError):
++    """Ошибка, связанная с ошибкой авторизации.
++
++    Это может произойти, если аутентификация не удалась из-за неправильных данных (например, неправильный `client_id` или `client_secret`).
++    """
++    pass
++
++class OAuthTokenExchangeError(OAuthError):
++    """Ошибка при обмене кода авторизации на токен.
++
++    Это может произойти, если запрос на получение токена OAuth не удался.
++    """
++    pass
++
++class OAuthConnectionError(OAuthError):
++    """Ошибка соединения с OAuth сервером.
++
++    Это может происходить из-за проблем с сетевым соединением или временной недоступности сервера.
++    """
++    pass
++
++class OAuthScopeError(OAuthError):
++    """Ошибка, связанная с недостаточными правами доступа (scope).
++
++    Возникает, когда запрашиваемый scope не соответствует нужным правам для выполнения операции.
++    """
++    pass
+diff --git a/amocrm_api_client/oauth/factory.py b/amocrm_api_client/oauth/factory.py
+new file mode 100644
+index 0000000..1ae443e
+--- /dev/null
++++ b/amocrm_api_client/oauth/factory.py
+@@ -0,0 +1,43 @@
++from .__client import OAuthClient
++from .config import OAuthConfig
++
++class OAuthFactory:
++    """
++    Фабрика для создания клиента OAuth.
++
++    Класс `OAuthFactory` используется для создания экземпляра клиента OAuth (`OAuthClient`), который будет
++    взаимодействовать с системой аутентификации AmoCRM через OAuth 2.0. Этот класс позволяет централизованно
++    настраивать и создавать клиента, используя параметры конфигурации, переданные в виде объекта класса
++    `OAuthConfig` или извлеченные из переменных окружения.
++
++    Методы:
++        create_oauth_client(OAuthConfig): Статический метод для создания и возвращения экземпляра клиента OAuth.
++    """
++
++    @staticmethod
++    def create_oauth_client(OAuthConfig: OAuthConfig) -> OAuthClient:
++        """
++        Создает и возвращает экземпляр клиента OAuth (OAuthClient).
++
++        Этот метод создает экземпляр `OAuthClient`, который использует переданную конфигурацию для подключения
++        к системе аутентификации AmoCRM через OAuth 2.0. Вы можете передать свою конфигурацию, либо она будет
++        автоматически загружена из переменных окружения. Если конфигурация передана, она используется для
++        создания клиента. В противном случае будет использован класс `OAuthConfig`, который сам будет извлекать
++        параметры из переменных окружения.
++
++        Параметры:
++            OAuthConfig (OAuthConfig): Объект конфигурации, содержащий параметры OAuth (например, client_id,
++                                       client_secret, redirect_uri и т. д.), необходимые для аутентификации.
++
++        Возвращаемое значение:
++            OAuthClient: Возвращает экземпляр клиента OAuth, настроенного с использованием переданной конфигурации.
++
++        Пример:
++            config = OAuthConfig(client_id="your_client_id", client_secret="your_client_secret", redirect_uri="your_redirect_uri")
++            oauth_client = OAuthFactory.create_oauth_client(config)
++
++            # или, если конфигурация извлекается из переменных окружения:
++            oauth_client = OAuthFactory.create_oauth_client(OAuthConfig)
++        """
++        config = OAuthConfig
++        return OAuthClient(config)
+diff --git a/amocrm_api_client/oauth/middleware.py b/amocrm_api_client/oauth/middleware.py
+new file mode 100644
+index 0000000..6b3181c
+--- /dev/null
++++ b/amocrm_api_client/oauth/middleware.py
+@@ -0,0 +1,75 @@
++from .__client import OAuthClient
++from .exceptions import OAuthError, OAuthInvalidTokenError
++
++class OAuthMiddleware:
++    """
++    Middleware для работы с OAuth: проверка токенов и обновление токена, если нужно.
++
++    Этот класс выполняет несколько важных функций:
++    - Проверяет, доступен ли токен доступа.
++    - Обновляет токен, если он просрочен или отсутствует.
++    - Обеспечивает выполнение аутентифицированных запросов с использованием OAuth-токена.
++
++    Атрибуты:
++        oauth_client (OAuthClient): Экземпляр клиента OAuth, который будет использоваться для выполнения запросов.
++    """
++
++    def __init__(self, oauth_client: OAuthClient):
++        """
++        Инициализация middleware с клиентом OAuth.
++
++        Параметры:
++            oauth_client (OAuthClient): Экземпляр клиента OAuth, используемый для выполнения запросов.
++        """
++        self._oauth_client = oauth_client
++
++    def _ensure_authenticated(self):
++        """
++        Проверка токена и обновление его, если необходимо.
++
++        Этот метод выполняет проверку наличия и валидности токена доступа. Если токен отсутствует
++        или недействителен, возбуждается исключение OAuthError.
++
++        Исключения:
++            OAuthError: Если токен доступа отсутствует или недействителен.
++        """
++
++        # Проверяем наличие токенов
++        if not self._oauth_client.access_token and not self._oauth_client.longlive_token:
++            raise OAuthError("Credentials not found")
++
++        # Функция для проверки истечения срока действия токенов
++        def check_token_expiration(token, token_type):
++            if token and self._oauth_client._is_token_expired(token):
++
++                if token_type == "access_token":
++                    self._oauth_client._refresh_access_token()
++
++                raise OAuthInvalidTokenError(f"{token_type} has been expired")
++
++        # Проверка истечения срока действия longlive_token
++        check_token_expiration(self._oauth_client.longlive_token, "longlive_token")
++
++        # Проверка истечения срока действия access_token
++        check_token_expiration(self._oauth_client.access_token, "access_token")
++
++    def make_authenticated_request(self, endpoint: str, method: str = "GET", data: dict = None):
++        """
++        Выполнение запросов с проверкой на авторизацию.
++
++        Этот метод сначала проверяет, есть ли действующий токен доступа, а затем выполняет запрос
++        к указанному эндпоинту с использованием этого токена. Если токен просрочен, он будет обновлен.
++
++        Параметры:
++            endpoint (str): URL-адрес эндпоинта, к которому будет выполнен запрос.
++            method (str, optional): HTTP-метод запроса (например, "GET", "POST"). По умолчанию используется "GET".
++            data (dict, optional): Данные, которые могут быть отправлены в теле запроса (например, для метода "POST").
++
++        Возвращаемое значение:
++            Результат запроса, полученный от клиента OAuth.
++
++        Исключения:
++            OAuthError: Если токен невалиден или недействителен.
++        """
++        self._ensure_authenticated()
++        return self._oauth_client._make_authenticated_request(endpoint, method, data)
+diff --git a/amocrm_api_client/security/__init__.py b/amocrm_api_client/security/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/amocrm_api_client/security/csrf.py b/amocrm_api_client/security/csrf.py
+new file mode 100644
+index 0000000..c8c571c
+--- /dev/null
++++ b/amocrm_api_client/security/csrf.py
+@@ -0,0 +1,59 @@
++import os
++import secrets
++import hashlib
++from datetime import datetime, timedelta
++
++class CSRFTokenManager:
++    def __init__(self, secret_key=None):
++        """
++        Инициализация менеджера CSRF токенов.
++        :param secret_key: Секретный ключ для подписи токенов (можно использовать secret_key интеграции)
++        """
++        self.secret_key = secret_key or os.urandom(24)
++        self.token_lifetime = timedelta(days=1)  # Время жизни токена, можно изменить
++
++    def generate_token(self, session_id):
++        """
++        Генерация CSRF токена.
++        :param session_id: Уникальный идентификатор сессии или пользователя
++        :return: Генерируемый CSRF токен
++        """
++        # Генерируем случайное значение для токена
++        random_bytes = secrets.token_bytes(32)
++        # Хешируем случайное значение с использованием секретного ключа и session_id
++        token = hashlib.sha256(self.secret_key + session_id.encode() + random_bytes).hexdigest()
++        return token
++
++    def validate_token(self, session_id, token):
++        """
++        Проверка CSRF токена.
++        :param session_id: Уникальный идентификатор сессии или пользователя
++        :param token: Токен, который пришел с запросом
++        :return: True, если токен валиден, иначе False
++        """
++        # Генерируем токен для проверки
++        generated_token = self.generate_token(session_id)
++        return secrets.compare_digest(generated_token, token)
++
++    def set_token_lifetime(self, lifetime: timedelta):
++        """
++        Устанавливает время жизни токена
++        :param lifetime: Время жизни токена в формате timedelta
++        """
++        self.token_lifetime = lifetime
++
++
++# Создаем экземпляр менеджера CSRF токенов
++# csrf_manager = CSRFTokenManager()
++#
++# # Генерация токена для сессии пользователя (например, с session_id = "user123")
++# session_id = "user123"
++# csrf_token = csrf_manager.generate_token(session_id)
++# print(f"Generated CSRF Token: {csrf_token}")
++#
++# # Проверка токена
++# is_valid = csrf_manager.validate_token(session_id, csrf_token)
++# print(f"Is the CSRF token valid? {is_valid}")
++#
++# # Изменение времени жизни токена (например, 2 дня)
++# csrf_manager.set_token_lifetime(timedelta(days=2))
+diff --git a/amocrm_api_client/webhook_parser/__init__.py b/amocrm_api_client/webhook_parser/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/amocrm_api_client/webhook_parser/exceptions.py b/amocrm_api_client/webhook_parser/exceptions.py
+new file mode 100644
+index 0000000..20c94c6
+--- /dev/null
++++ b/amocrm_api_client/webhook_parser/exceptions.py
+@@ -0,0 +1,9 @@
++# amocrm_api/webhook_parser/exceptions.py
++
++class WebhookSignatureError(Exception):
++    """Ошибка при проверке подписи webhook."""
++    pass
++
++class WebhookParseError(Exception):
++    """Ошибка при парсинге данных webhook."""
++    pass
+diff --git a/amocrm_api_client/webhook_parser/parsers.py b/amocrm_api_client/webhook_parser/parsers.py
+new file mode 100644
+index 0000000..241c767
+--- /dev/null
++++ b/amocrm_api_client/webhook_parser/parsers.py
+@@ -0,0 +1,10 @@
++# amocrm_api/webhook_parser/parser.py
++import json
++from .._utils import _calculate_signature
++from .exceptions import WebhookSignatureError, WebhookParseError
++
++class DigitalPipelineParser:
++    pass
++
++class DisposibleTokenParser:
++    pass
+\ No newline at end of file
+diff --git a/pyproject.toml b/pyproject.toml
+new file mode 100644
+index 0000000..ba486af
+--- /dev/null
++++ b/pyproject.toml
+@@ -0,0 +1,16 @@
++[tool.poetry]
++name = "amocrm-api-middleware"
++version = "0.1.0"
++description = "Python library designed to simplify and streamline the interaction between your application and the amoCRM API. It acts as a middleware layer that handles various aspects of the communication process, including API requests, authentication, response handling, and error management, making it easier to integrate and manage data with amoCRM."
++authors = ["PSYCHXLAUGH <PSYCHXLAUGH@users.noreply.github.com>"]
++license = "MIT"
++readme = "README.md"
++
++[tool.poetry.dependencies]
++python = "^3.8"
++requests = "^2.32.3"
++
++
++[build-system]
++requires = ["poetry-core"]
++build-backend = "poetry.core.masonry.api"
