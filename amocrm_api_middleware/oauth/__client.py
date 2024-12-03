@@ -3,6 +3,7 @@ from typing import Dict, Optional
 from .exceptions import OAuthError
 from .config import OAuthConfig
 from .._utils import _decode_jwt, _compare_timestamp_with_current
+from amocrm_api_middleware import __version__
 
 class OAuthClient:
     """
@@ -136,7 +137,7 @@ class OAuthClient:
         self.refresh_token = token_data.get("refresh_token")
         return token_data
 
-    def _make_authenticated_request(self, endpoint: str, method: str = "GET", data: Optional[Dict[str, str]] = None) -> Dict[str, str]:
+    def _make_authenticated_request(self,endpoint: str, method: str = "GET", data: Optional[Dict[str, str]] = None) -> Dict[str, str]:
         """
         Выполнение запросов к API с использованием access token.
 
@@ -151,7 +152,8 @@ class OAuthClient:
 
         headers: Dict[str, str] = {
             "Authorization": f"Bearer {self.longlive_token if self.longlive_token else self.access_token}",
-            "Content-Type": "application/json"
+            "Content-Type": 'application/json',
+            'User-Agent': f'amocrm-api-middleware/{__version__}'
         }
 
         url: str = f"{self.base_url}/{endpoint}"
@@ -162,6 +164,10 @@ class OAuthClient:
             response = requests.get(url, headers=headers)
         elif method == "POST":
             response = requests.post(url, headers=headers, json=data)
+        elif method == "PATCH":
+            response = requests.patch(url, headers=headers, json=data)
+        elif method == "PUT":
+            response = requests.put(url, headers=headers, json=data)
 
         if response.status_code != 200:
             raise OAuthError(f"Failed to make request to {url}: {response.text}")

@@ -1,5 +1,6 @@
 from .__client import OAuthClient
-from .exceptions import OAuthError, OAuthInvalidTokenError
+from .exceptions import OAuthLongTermTokenExpired, OAuthAccessTokenExpired
+from .exceptions import OAuthTokenNotFoundError
 
 class OAuthMiddleware:
     """
@@ -23,7 +24,7 @@ class OAuthMiddleware:
         """
         self._oauth_client = oauth_client
 
-    def _ensure_authenticated(self):
+    def _ensure_authenticated(self) -> None:
         """
         Проверка токена и обновление его, если необходимо.
 
@@ -36,22 +37,17 @@ class OAuthMiddleware:
 
         # Проверяем наличие токенов
         if not self._oauth_client.access_token and not self._oauth_client.longlive_token:
-            raise OAuthError("Credentials not found")
+            raise OAuthTokenNotFoundError("credentials not found")
 
-        # Функция для проверки истечения срока действия токенов
-        def check_token_expiration(token, token_type):
-            if token and self._oauth_client._is_token_expired(token):
+        # Функция для проверки истечения срока действия токенов.
 
-                if token_type == "access_token":
-                    self._oauth_client._refresh_access_token()
+        if self._oauth_client.longlive_token and self._oauth_client.is_token_expired(self._oauth_client.longlive_token):
+            raise OAuthLongTermTokenExpired("long-term token has expired.")
 
-                raise OAuthInvalidTokenError(f"{token_type} has been expired")
 
-        # Проверка истечения срока действия longlive_token
-        check_token_expiration(self._oauth_client.longlive_token, "longlive_token")
+        if self._oauth_client.access_token and self._oauth_client.is_token_expired(self._oauth_client.access_token):
+            raise OAuthAccessTokenExpired("access token has expired.")
 
-        # Проверка истечения срока действия access_token
-        check_token_expiration(self._oauth_client.access_token, "access_token")
 
     def make_authenticated_request(self, endpoint: str, method: str = "GET", data: dict = None):
         """

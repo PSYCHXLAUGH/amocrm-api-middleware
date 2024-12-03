@@ -2,6 +2,18 @@ class OAuthError(Exception):
     """Основная ошибка при взаимодействии с OAuth 2.0."""
     pass
 
+
+class OAuthTokenNotFoundError(OAuthError):
+    pass
+
+
+class OAuthLongTermTokenExpired(OAuthError):
+    pass
+
+
+class OAuthAccessTokenExpired(OAuthError):
+    pass
+
 class OAuthInvalidRequestError(OAuthError):
     """Ошибка, возникающая при неправильном запросе к OAuth серверу.
 
@@ -44,3 +56,5 @@ class OAuthScopeError(OAuthError):
     Возникает, когда запрашиваемый scope не соответствует нужным правам для выполнения операции.
     """
     pass
+
+
