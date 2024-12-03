@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "amocrm-api-middleware"
+version = "0.1.0"
+description = "Python library designed to simplify and streamline the interaction between your application and the amoCRM API. It acts as a middleware layer that handles various aspects of the communication process, including API requests, authentication, response handling, and error management, making it easier to integrate and manage data with amoCRM."
+authors = ["PSYCHXLAUGH <PSYCHXLAUGH@users.noreply.github.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+requests = "^2.32.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
