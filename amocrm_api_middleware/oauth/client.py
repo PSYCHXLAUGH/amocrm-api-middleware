@@ -1,14 +1,18 @@
 import requests
+import logging
 from typing import Dict, Optional
 from .exceptions import OAuthError
 from .config import OAuthConfig
 from .._utils import _decode_jwt, _compare_timestamp_with_current
 from amocrm_api_middleware import __version__
 
+logger = logging.getLogger(__name__)
+
 class OAuthClient:
     """
-    Основной клиент для работы с OAuth 2.0 API amocrm.
+    Основной клиент для работы с OAuth 2.0 API AmoCRM.
     """
+    # TODO: Добавить методы для amojo и drive
 
     def __init__(self, config: OAuthConfig):
         """
@@ -17,37 +21,19 @@ class OAuthClient:
         Параметры:
             config (OAuthConfig): Конфигурация OAuth для клиента.
         """
-
         self.config: OAuthConfig = config
         self.access_token: Optional[str] = None
         self.refresh_token: Optional[str] = None
         self.longlive_token: Optional[str] = None
         self.api_key: Optional[str] = None
         self.base_url: Optional[str] = None
-        
-    def get_domain_info(self, refresh_token):
-        pass
 
-
-    def get_authorization_script(
-            self,
-            button_client_id: str,
-            button_class: str = "amocrm_oauth",
-            button_charset: str = "utf-8",
-            button_title: str = "Button",
-            button_compact: str ="false",
-            button_class_name: str ="className",
-            button_color="default",
-            button_state="state",
-            button_error_callback="functionName",
-            button_mode="popup",
-            button_src="https://www.amocrm.ru/auth/button.min.js"
-
-    ) -> str:
-
-        pass
-
-
+    def get_domain_info(self, refresh_token: str) -> Optional[Dict[str, str]]:
+        """
+        Получение информации о домене.
+        """
+        endpoint = "api/v4/domain"
+        return self._make_authenticated_request(endpoint, method="GET")
 
     def get_authorization_url(self, state: Optional[str] = None, mode: Optional[str] = None) -> str:
         """
@@ -60,44 +46,40 @@ class OAuthClient:
         Возвращаемое значение:
             str: Сгенерированный URL для авторизации.
         """
-        # Начальная часть URL
-        authorization_url: str = f"https://www.amocrm.ru/oauth?client_id={self.config.client_id}"
+        params = {
+            "client_id": self.config.client_id,
+            "state": state,
+            "mode": mode
+        }
 
-        # Добавляем параметр state, если он передан
-        if state:
-            authorization_url += f"&state={state}"
+        # Фильтруем None значения из параметров
+        params = {key: value for key, value in params.items() if value is not None}
 
-        # Добавляем параметр mode, если state не был передан
-        if mode:
-            authorization_url += f"&mode={mode}"
-
-        return authorization_url
+        return f"https://www.amocrm.ru/oauth?{self._encode_params(params)}"
 
     def exchange_api_key(self) -> str:
         """
-        Метод позволяет обменять API ключ на код авторизации OAuth.
-        Код авторизации будет отправлен на указанный в интеграции
-        Redirect Uri с дополнительным GET-параметром from_exchange=1.
-
-        Возвращаемое значение:
-            str: Ключ авторизации (пока не реализовано).
+        Обмен API ключа на код авторизации OAuth.
         """
+        # Пока не реализовано
         pass
 
-    def set_oauth_secrets(self, access_token, refresh_token, subdomain) -> bool:
-
+    def set_oauth_credentials(self, access_token: str, refresh_token: str, subdomain: str) -> bool:
+        """
+        Устанавливает OAuth креденшелы.
+        """
         self.base_url = f"https://{subdomain}.amocrm.ru"
         self.access_token = access_token
         self.refresh_token = refresh_token
-
-        pass
+        return True
 
     def set_longlive_token(self, longlive_token: str, subdomain: str) -> bool:
-
+        """
+        Устанавливает longlive токен.
+        """
         self.base_url = f"https://{subdomain}.amocrm.ru"
         self.longlive_token = longlive_token
-
-        pass
+        return True
 
     def get_access_token(self, authorization_code: str, subdomain: str) -> Dict[str, str]:
         """
@@ -111,9 +93,9 @@ class OAuthClient:
             Dict[str, str]: Словарь с данными токенов (access_token, refresh_token).
         """
         self.base_url = f"https://{subdomain}.amocrm.ru"
-        url: str = f"{self.base_url}/oauth2/access_token"
+        url = f"{self.base_url}/oauth2/access_token"
 
-        data: Dict[str, str] = {
+        data = {
             "client_id": self.config.client_id,
             "client_secret": self.config.client_secret,
             "redirect_uri": self.config.redirect_uri,
@@ -121,11 +103,7 @@ class OAuthClient:
             "grant_type": "authorization_code",
         }
 
-        response = requests.post(url, data=data)
-        if response.status_code != 200:
-            raise OAuthError(f"Failed to get access token: {response.text}")
-
-        token_data: Dict[str, str] = response.json()
+        token_data = self._make_post_request(url, data)
         self.access_token = token_data["access_token"]
         self.refresh_token = token_data.get("refresh_token")
         return token_data
@@ -140,65 +118,80 @@ class OAuthClient:
         if not self.refresh_token:
             raise OAuthError("No refresh token available")
 
-        data: Dict[str, str] = {
+        url = f"{self.base_url}/oauth2/access_token"
+        data = {
             "client_id": self.config.client_id,
             "client_secret": self.config.client_secret,
             "grant_type": "refresh_token",
             "refresh_token": self.refresh_token
         }
 
-        response = requests.post(self.config, data=data)
-        if response.status_code != 200:
-            raise OAuthError(f"Failed to refresh access token: {response.text}")
-
-        token_data: Dict[str, str] = response.json()
+        token_data = self._make_post_request(url, data)
         self.access_token = token_data["access_token"]
         self.refresh_token = token_data.get("refresh_token")
         return token_data
 
-    def _make_authenticated_request(self,endpoint: str, method: str = "GET", data: Optional[Dict[str, str]] = None) -> Dict[str, str]:
+    def _make_authenticated_request(self, endpoint: str, method: str = "GET", data: Optional[Dict[str, str]] = None) -> Dict[str, str]:
         """
         Выполнение запросов к API с использованием access token.
-
-        Параметры:
-            endpoint (str): URL-адрес эндпоинта для запроса.
-            method (str, optional): HTTP-метод запроса. По умолчанию "GET".
-            data (Optional[Dict[str, str]], optional): Данные для отправки в теле запроса, если используется метод "POST".
-
-        Возвращаемое значение:
-            Dict[str, str]: Ответ от сервера в виде JSON-словаря.
         """
-
-        headers: Dict[str, str] = {
+        url = f"{self.base_url}/{endpoint}"
+        headers = {
             "Authorization": f"Bearer {self.longlive_token if self.longlive_token else self.access_token}",
             "Content-Type": 'application/json',
             'User-Agent': f'amocrm-api-middleware/{__version__}'
         }
 
-        url: str = f"{self.base_url}/{endpoint}"
-
-        # TODO: Добавить еще методов
-
-        if method == "GET":
-            response = requests.get(url, headers=headers)
-        elif method == "POST":
-            response = requests.post(url, headers=headers, json=data)
-        elif method == "PATCH":
-            response = requests.patch(url, headers=headers, json=data)
-        elif method == "PUT":
-            response = requests.put(url, headers=headers, json=data)
-
-        if response.status_code != 200: # TODO: ADD EXCEPTION MAP
-            raise OAuthError(f"Failed to make request to {url}: {response.text}")
-
+        response = self._make_request(url, method, headers, data)
         return response.json()
 
+    def _make_request(self, url: str, method: str, headers: Dict[str, str], data: Optional[Dict[str, str]] = None) -> requests.Response:
+        """
+        Выполнение HTTP запроса.
+        """
+        logger.debug(f"[] Making {method} request to {url} with headers: {headers} and data: {data}")
 
-    def decode_jwt(self, token):
+        try:
+            if method == "GET":
+                return requests.get(url, headers=headers)
+            elif method == "POST":
+                return requests.post(url, headers=headers, json=data)
+            elif method == "PATCH":
+                return requests.patch(url, headers=headers, json=data)
+            elif method == "PUT":
+                return requests.put(url, headers=headers, json=data)
+            else:
+                raise ValueError(f"Unsupported HTTP method: {method}")
+        except requests.RequestException as e:
+            logger.error(f"Request to {url} failed: {e}")
+            raise OAuthError(f"Request failed: {e}")
+
+    def _make_post_request(self, url: str, data: Dict[str, str]) -> Dict[str, str]:
+        """
+        Упрощение для выполнения POST запросов.
+        """
+        response = self._make_request(url, "POST", headers={}, data=data)
+        if response.status_code != 200:
+            raise OAuthError(f"Failed to post to {url}: {response.text}")
+        return response.json()
+
+    def _encode_params(self, params: Dict[str, str]) -> str:
+        """
+        Кодирование параметров для URL.
+        """
+        from urllib.parse import urlencode
+        return urlencode(params)
+
+    def decode_jwt(self, token: str) -> Dict[str, str]:
+        """
+        Декодирует JWT токен.
+        """
         return _decode_jwt(token)
 
-
-    def is_token_expired(self, token) -> Optional[bool, None]:
+    def is_token_expired(self, token: str) -> Optional[bool]:
+        """
+        Проверяет, истек ли срок действия токена.
+        """
         if token is None:
             return None
 
@@ -206,4 +199,5 @@ class OAuthClient:
         jwt_exp = jwt.get('exp')
 
         return _compare_timestamp_with_current(jwt_exp)
+
 

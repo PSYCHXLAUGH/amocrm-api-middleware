@@ -69,3 +69,10 @@ class OAuthMiddleware:
         """
         self._ensure_authenticated()
         return self._oauth_client._make_authenticated_request(endpoint, method, data)
+
+    def make_amojo_request(self): # TODO: Отправка сообщений
+        pass
+
+
+   def make_drive_request(self): # TODO: Отправка файла
+       pass
