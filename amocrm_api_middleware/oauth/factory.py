@@ -1,4 +1,4 @@
-from .__client import OAuthClient
+from .client import OAuthClient
 from .config import OAuthConfig
 
 class OAuthFactory:

@@ -24,10 +24,29 @@ class OAuthClient:
         self.longlive_token: Optional[str] = None
         self.api_key: Optional[str] = None
         self.base_url: Optional[str] = None
-
-
-    def get_authorization_button(self):
+        
+    def get_domain_info(self, refresh_token):
         pass
+
+
+    def get_authorization_script(
+            self,
+            button_client_id: str,
+            button_class: str = "amocrm_oauth",
+            button_charset: str = "utf-8",
+            button_title: str = "Button",
+            button_compact: str ="false",
+            button_class_name: str ="className",
+            button_color="default",
+            button_state="state",
+            button_error_callback="functionName",
+            button_mode="popup",
+            button_src="https://www.amocrm.ru/auth/button.min.js"
+
+    ) -> str:
+
+        pass
+
 
 
     def get_authorization_url(self, state: Optional[str] = None, mode: Optional[str] = None) -> str:
@@ -111,7 +130,7 @@ class OAuthClient:
         self.refresh_token = token_data.get("refresh_token")
         return token_data
 
-    def _refresh_access_token(self) -> Dict[str, str]:
+    def refresh_access_token(self) -> Dict[str, str]:
         """
         Обновление токена доступа с использованием refresh токена.
 
@@ -128,7 +147,7 @@ class OAuthClient:
             "refresh_token": self.refresh_token
         }
 
-        response = requests.post(self.config.token_url, data=data)
+        response = requests.post(self.config, data=data)
         if response.status_code != 200:
             raise OAuthError(f"Failed to refresh access token: {response.text}")
 
@@ -169,10 +188,14 @@ class OAuthClient:
         elif method == "PUT":
             response = requests.put(url, headers=headers, json=data)
 
-        if response.status_code != 200:
+        if response.status_code != 200: # TODO: ADD EXCEPTION MAP
             raise OAuthError(f"Failed to make request to {url}: {response.text}")
 
         return response.json()
+
+
+    def decode_jwt(self, token):
+        return _decode_jwt(token)
 
 
     def is_token_expired(self, token) -> Optional[bool, None]:
@@ -183,3 +206,4 @@ class OAuthClient:
         jwt_exp = jwt.get('exp')
 
         return _compare_timestamp_with_current(jwt_exp)
+

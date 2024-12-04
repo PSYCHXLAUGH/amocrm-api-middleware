@@ -1,4 +1,4 @@
-from .__client import OAuthClient
+from .client import OAuthClient
 from .exceptions import OAuthLongTermTokenExpired, OAuthAccessTokenExpired
 from .exceptions import OAuthTokenNotFoundError
 
