@@ -1,24 +1,37 @@
 from typing import Optional, Dict, Any
 
 class OAuthError(Exception):
-    """Основная ошибка при взаимодействии с OAuth 2.0."""
-    pass
+    """Основная ошибка при взаимодействии с OAuth 2.0.
 
+    Все специфичные ошибки, связанные с OAuth, наследуются от этой ошибки.
+    """
+    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None):
+        super().__init__(message)
+        self.details = details or {}
 
 class OAuthTokenNotFoundError(OAuthError):
-    """Ошибка при отсутствии токена."""
-    pass
+    """Ошибка при отсутствии токена.
 
+    Возникает, когда токен не найден в запросе, либо пользователь не авторизован.
+    """
+    def __init__(self, message: str = "OAuth token not found", details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, details)
 
 class OAuthLongTermTokenExpired(OAuthError):
-    """Ошибка при истечении срока действия долгосрочного токена."""
-    pass
+    """Ошибка при истечении срока действия долгосрочного токена.
 
+    Этот токен обычно используется для длительных сессий, и он истекает после определенного времени.
+    """
+    def __init__(self, message: str = "Long-term OAuth token has expired", details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, details)
 
 class OAuthAccessTokenExpired(OAuthError):
-    """Ошибка при истечении срока действия access-токена."""
-    pass
+    """Ошибка при истечении срока действия access-токена.
 
+    Этот токен используется для авторизации и может истечь в течение короткого времени.
+    """
+    def __init__(self, message: str = "Access token has expired", details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, details)
 
 class OAuthInvalidRequestError(OAuthError):
     """Ошибка, возникающая при неправильном запросе к OAuth серверу.
@@ -26,44 +39,46 @@ class OAuthInvalidRequestError(OAuthError):
     Это может включать случаи, когда запрос не содержит необходимых параметров
     или когда параметры запроса неверны.
     """
-    pass
-
+    def __init__(self, message: str = "Invalid OAuth request", details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, details)
 
 class OAuthInvalidTokenError(OAuthError):
     """Ошибка, возникающая при некорректном или истекшем токене.
 
     Это может быть связано с истечением срока действия токена или его недействительностью.
     """
-    pass
-
+    def __init__(self, message: str = "Invalid or expired OAuth token", details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, details)
 
 class OAuthAuthorizationError(OAuthError):
     """Ошибка, связанная с ошибкой авторизации.
 
     Это может произойти, если аутентификация не удалась из-за неправильных данных (например, неправильный `client_id` или `client_secret`).
     """
-    pass
-
+    def __init__(self, message: str = "Authorization failed", details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, details)
 
 class OAuthTokenExchangeError(OAuthError):
     """Ошибка при обмене кода авторизации на токен.
 
-    Это может произойти, если запрос на получение токена OAuth не удался.
+    Этот тип ошибки возникает, если запрос на получение токена OAuth не удался.
     """
-    pass
-
+    def __init__(self, message: str = "OAuth token exchange failed", details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, details)
 
 class OAuthConnectionError(OAuthError):
     """Ошибка соединения с OAuth сервером.
 
     Это может происходить из-за проблем с сетевым соединением или временной недоступностью сервера.
     """
-    pass
-
+    def __init__(self, message: str = "Connection error with OAuth server", details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, details)
 
 class OAuthScopeError(OAuthError):
     """Ошибка, связанная с недостаточными правами доступа (scope).
 
     Возникает, когда запрашиваемый scope не соответствует нужным правам для выполнения операции.
     """
-    pass
+    def __init__(self, message: str = "Insufficient scope for this request", details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, details)
+
