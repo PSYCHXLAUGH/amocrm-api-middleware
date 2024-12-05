@@ -1,12 +1,14 @@
 import requests
 import logging
+import json
+import os
 from typing import Dict, Optional
 from .exceptions import OAuthError
 from .config import OAuthConfig
 from .._utils import _decode_jwt, _compare_timestamp_with_current
 from amocrm_api_middleware import __version__
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__) # TODO: поменять на loguru
 
 class OAuthClient:
     """
@@ -201,3 +203,99 @@ class OAuthClient:
         return _compare_timestamp_with_current(jwt_exp)
 
 
+
+
+class FileUploadManager:
+    def __init__(self, access_token: str, max_part_size: int = 131072):
+        """
+        from file_uploader import FileUploader
+
+        # Создаем объект загрузчика
+        uploader = FileUploader(access_token='your_access_token')
+
+        # Загружаем файл
+        uploader.upload_file(file_path='cat.jpeg', file_name='cat.jpeg')
+
+        Инициализация FileUploader.
+
+        :param access_token: Токен доступа для авторизации в API
+        :param max_part_size: Максимальный размер части файла для загрузки (по умолчанию 131072 байт)
+        """
+        self.access_token = access_token
+        self.max_part_size = max_part_size
+
+    def create_session(self, file_name: str, file_size: int) -> str:
+        """
+        Создает сессию для загрузки файла на сервер.
+
+        :param file_name: Имя загружаемого файла
+        :param file_size: Размер файла
+        :return: URL для загрузки файла
+        """
+        url = "https://drive-b.amocrm.ru/v1.0/sessions" # TODO: ДОбавить получение drive_url
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {self.access_token}'
+        }
+        payload = json.dumps({
+            "file_name": file_name,
+            "file_size": file_size,
+            "content_type": 'image/jpeg'
+        })
+
+        response = requests.post(url, headers=headers, data=payload)
+        response.raise_for_status()  # Выбрасываем ошибку при плохом статусе
+        return response.json()['upload_url']
+
+    def upload_chunk(self, file_chunk: bytes, upload_url: str) -> str:
+        """
+        Загружает одну часть файла на сервер.
+
+        :param file_chunk: Часть файла для загрузки
+        :param upload_url: URL для загрузки
+        :return: URL для следующей части загрузки
+        """
+        headers = {
+            'Content-Type': 'image/jpeg',
+            'Authorization': f'Bearer {self.access_token}'
+        }
+
+        response = requests.post(upload_url, headers=headers, data=file_chunk)
+        response.raise_for_status()  # Выбрасываем ошибку при плохом статусе
+        print("Загружена часть файла")
+        print(response.json())
+
+        return response.json().get('next_url')
+
+    def upload_file_in_parts(self, file_path: str):
+        """
+        Читает файл частями (генератор).
+
+        :param file_path: Путь к файлу
+        :yield: Части файла размером max_part_size
+        """
+        file_size = os.path.getsize(file_path)
+        print(f"Размер файла: {file_size} байт")
+
+        with open(file_path, 'rb') as file:
+            while chunk := file.read(self.max_part_size):
+                yield chunk
+
+    def upload_file(self, file_path: str, file_name: str):
+        """
+        Загружает файл на сервер частями.
+
+        :param file_path: Путь к файлу
+        :param file_name: Имя файла
+        """
+        # Создаем сессию для загрузки файла
+        upload_url = self.create_session(file_name=file_name, file_size=os.path.getsize(file_path))
+
+        # Загружаем файл частями
+        for part in self.upload_file_in_parts(file_path):
+            upload_url = self.upload_chunk(file_chunk=part, upload_url=upload_url)
+
+
+
+class AmojoClient:
+    pass
