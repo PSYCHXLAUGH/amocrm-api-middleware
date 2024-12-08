@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Type
 
 class OAuthError(Exception):
     """Основная ошибка при взаимодействии с OAuth 2.0.
@@ -82,3 +82,22 @@ class OAuthScopeError(OAuthError):
     def __init__(self, message: str = "Insufficient scope for this request", details: Optional[Dict[str, Any]] = None):
         super().__init__(message, details)
 
+
+class EXCEPTION_MAP:
+    # Словарь для маппинга кода ответа на исключение
+    __exception_map: Dict[int, Type[OAuthError]] = {
+        400: OAuthTokenNotFoundError,
+        401: OAuthAuthorizationError,
+        403: OAuthAccessTokenExpired,
+        404: OAuthTokenNotFoundError,
+    }
+
+    @staticmethod
+    def handle_exception(response_code: int) -> OAuthError:
+        """Обрабатывает исключение по коду ответа."""
+        exception_class = EXCEPTION_MAP.__exception_map.get(response_code)
+        if exception_class:
+            return exception_class(f"Error occurred with status code: {response_code}")
+        else:
+            # Если код не найден, генерируем общее исключение
+            return OAuthError(f"Unexpected error with status code: {response_code}")

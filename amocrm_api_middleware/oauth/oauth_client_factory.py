@@ -1,7 +1,7 @@
-from .client import OAuthClient
-from .config import OAuthConfig
+from .client import OAuthV4Client
+from .config import OAuthV4Config
 
-class OAuthFactory:
+class OAuthV4ApiClient:
     """
     Фабрика для создания клиента OAuth.
 
@@ -15,7 +15,7 @@ class OAuthFactory:
     """
 
     @staticmethod
-    def create_oauth_client(OAuthConfig: OAuthConfig) -> OAuthClient:
+    def create_oauth_client(OAuthConfig: OAuthV4Config) -> OAuthV4Client:
         """
         Создает и возвращает экземпляр клиента OAuth (OAuthClient).
 
@@ -39,5 +39,5 @@ class OAuthFactory:
             # или, если конфигурация извлекается из переменных окружения:
             oauth_client = OAuthFactory.create_oauth_client(OAuthConfig)
         """
-        config = OAuthConfig
-        return OAuthClient(config)
+        config = OAuthV4Config
+        return OAuthV4Client(config)

@@ -1,29 +1,29 @@
 import os
 from dataclasses import dataclass
 
+
 @dataclass
-class OAuthConfig:
+class WidgetV4Config:
     """
-    Класс конфигурации OAuth 2.0 для интеграции с AmoCRM API.
+    OAuth 2.0 Configuration class for integrating with the amoCRM API.
 
-    Этот класс используется для хранения параметров, необходимых для аутентификации и работы с API AmoCRM через OAuth 2.0.
-    Он позволяет задать параметры, такие как `client_id`, `client_secret`, `redirect_uri`, а также автоматически
-    загружать их из переменных окружения, если они не были явно указаны.
+    This class is used to store the parameters required for authentication
+    and interaction with the amoCRM API via OAuth 2.0.
+    It allows specifying parameters such as `client_id`, `client_secret`,
+    and `redirect_uri` for authentication and token retrieval.
+    These parameters can be supplied explicitly or through environment variables.
 
-    Атрибуты:
-        client_id (str): Идентификатор клиента OAuth, необходимый для аутентификации. Может быть загружен из
-                         переменной окружения `AMOCRM_CLIENT_ID`, если не указан явно.
-        client_secret (str): Секрет клиента OAuth, используемый для аутентификации. Может быть загружен из
-                             переменной окружения `AMOCRM_CLIENT_SECRET`, если не указан явно.
-        redirect_uri (str): URL, на который будет перенаправлен пользователь после успешной аутентификации.
-                            Может быть загружен из переменной окружения `AMOCRM_REDIRECT_URI`, если не указан явно.
-        auth_url (str): URL для аутентификации через OAuth. По умолчанию: "https://www.amocrm.ru/oauth".
-        token_url (str): URL для получения токенов OAuth. По умолчанию: "https://www.amocrm.ru/oauth2/access_token".
-        api_url (str): URL для работы с API AmoCRM. По умолчанию: "https://api.amocrm.ru/v4".
-
-    Методы:
-        __post_init__: Проверяет, установлены ли значения для обязательных атрибутов (`client_id`, `client_secret`,
-                        `redirect_uri`). Если нет, пытается загрузить их из переменных окружения.
+    Attributes:
+        client_id (str): The OAuth client ID required for authentication with the amoCRM API.
+                         This can be passed via the environment variable `AMOCRM_CLIENT_ID`
+                         if not provided explicitly.
+        client_secret (str): The OAuth client secret used for authentication with the amoCRM API.
+                             This can be passed via the environment variable `AMOCRM_CLIENT_SECRET`
+                             if not provided explicitly.
+        redirect_uri (str): The URL to which the user will be redirected after successful authentication.
+                             This can be passed via the environment variable `AMOCRM_REDIRECT_URI`
+                             if not provided explicitly.
+        segment (str): kommo or amoCRM
     """
 
     client_id: str = ""

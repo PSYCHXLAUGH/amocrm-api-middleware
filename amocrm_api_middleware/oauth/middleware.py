@@ -1,8 +1,9 @@
-from .client import OAuthClient
+from .client import OAuthV4Client
 from .exceptions import OAuthLongTermTokenExpired, OAuthAccessTokenExpired
 from .exceptions import OAuthTokenNotFoundError
+from ..helpers import OAuthV4Helper
 
-class OAuthMiddleware:
+class OAuthV4Middleware:
     """
     Middleware для работы с OAuth: проверка токенов и обновление токена, если нужно.
 
@@ -15,7 +16,7 @@ class OAuthMiddleware:
         oauth_client (OAuthClient): Экземпляр клиента OAuth, который будет использоваться для выполнения запросов.
     """
 
-    def __init__(self, oauth_client: OAuthClient):
+    def __init__(self, oauth_client: OAuthV4Client): # TODO сделать проверку того, какой класс здесь передается. Например fileuploadmanger
         """
         Инициализация middleware с клиентом OAuth.
 
@@ -41,7 +42,7 @@ class OAuthMiddleware:
 
         # Функция для проверки истечения срока действия токенов.
 
-        if self._oauth_client.longlive_token and self._oauth_client.is_token_expired(self._oauth_client.longlive_token):
+        if self._oauth_client.longlive_token and OAuthV4Helper.is_token_expired(self._oauth_client.longlive_token):
             raise OAuthLongTermTokenExpired("long-term token has expired.")
 
 
@@ -49,7 +50,7 @@ class OAuthMiddleware:
             raise OAuthAccessTokenExpired("access token has expired.")
 
 
-    def make_authenticated_request(self, endpoint: str, method: str = "GET", data: dict = None):
+    def make_v4_authenticated_request(self, endpoint: str, method: str = "GET", data: dict = None):
         """
         Выполнение запросов с проверкой на авторизацию.
 
@@ -58,8 +59,8 @@ class OAuthMiddleware:
 
         Параметры:
             endpoint (str): URL-адрес эндпоинта, к которому будет выполнен запрос.
-            method (str, optional): HTTP-метод запроса (например, "GET", "POST"). По умолчанию используется "GET".
-            data (dict, optional): Данные, которые могут быть отправлены в теле запроса (например, для метода "POST").
+            Method (str, optional): HTTP-метод запроса (например, "GET", "POST"). По умолчанию используется "GET".
+            Data (dict, optional): Данные, которые могут быть отправлены в теле запроса (например, для метода "POST").
 
         Возвращаемое значение:
             Результат запроса, полученный от клиента OAuth.
@@ -68,11 +69,11 @@ class OAuthMiddleware:
             OAuthError: Если токен невалиден или недействителен.
         """
         self._ensure_authenticated()
-        return self._oauth_client._make_authenticated_request(endpoint, method, data)
+        return self._oauth_client._make_v4_authenticated_request(endpoint, method, data)
 
-    def make_amojo_request(self): # TODO: Отправка сообщений
+    def make_amojo_authenticated_request(self): # TODO: Отправка сообщений
         pass
 
 
-   def make_drive_request(self): # TODO: Отправка файла
-       pass
+    def make_drive_authenticated_request(self): # TODO: Отправка файла
+        pass
