@@ -1,7 +1,7 @@
 from loguru import logger
 import requests
 from typing import Optional, Dict
-from amocrm_api_middleware import __version__
+from amowrapper import __version__
 
 
 class BaseV4Request:

@@ -1,17 +1,17 @@
 from typing import Dict, Optional
 from loguru import logger
-from .config import WidgetV4Config
+from .config import WidgetConfig
 from ._segments import OAuthV4Segment
 from ._base_v4_request import BaseV4Request
 
-class OAuthV4ApiClient(BaseV4Request):
+class OAuthApiClient(BaseV4Request):
     """
     Основной клиент для работы с OAuth 2.0 API AmoCRM.
     """
     # TODO: Добавить методы для amojo и drive
 
     def __init__(self,
-                 config: WidgetV4Config,
+                 widget: WidgetConfig,
                  debug: bool,
                  segment: str,
                  subdomain: Optional[str] = None
@@ -99,3 +99,11 @@ class OAuthV4ApiClient(BaseV4Request):
         "Здесь обарщается мидлварь"
         pass
 
+
+    def make_drive_authenticated_request(self, url: str, data: Dict[str, str]) -> Dict[str, str]:
+        "Здесь обарщается мидлварь"
+        pass
+
+    def make_amojo_authenticated_request(self, url: str, data: Dict[str, str]) -> Dict[str, str]:
+        "Здесь обарщается мидлварь"
+        pass

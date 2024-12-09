@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class WidgetV4Config:
+class WidgetConfig:
     """
     OAuth 2.0 Configuration class for integrating with the amoCRM API.
 

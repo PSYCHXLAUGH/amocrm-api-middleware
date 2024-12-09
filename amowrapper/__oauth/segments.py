@@ -1,5 +1,5 @@
 from .._const import KOMMO_V4_CONST, AMOCRM_V4_CONST
-from ..helpers import OAuthV4SegmentHelper
+from ..__helpers import OAuthV4SegmentHelper
 
 class OAuthV4Segment:
     """Фасад для работы с различными API (AmoCRM, Kommo)."""

@@ -1,9 +1,9 @@
 from .client import OAuthV4Client
 from .exceptions import OAuthLongTermTokenExpired, OAuthAccessTokenExpired
 from .exceptions import OAuthTokenNotFoundError
-from ..helpers import OAuthV4Helper
+from ..__helpers import OAuthV4Helper
 
-class OAuthV4Middleware:
+class OAuthMiddleware:
     """
     Middleware для работы с OAuth: проверка токенов и обновление токена, если нужно.
 

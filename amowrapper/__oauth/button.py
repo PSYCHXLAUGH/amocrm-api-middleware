@@ -1,7 +1,7 @@
 from client import OAuthV4ApiClient
 from urllib3 import urlen
 
-class OAuthButtonV4Manager:
+class OAuthButtonManager:
     def __init__(self, OAuthV4ApiClient: OAuthV4ApiClient):
         self.config = OAuthV4ApiClient
 

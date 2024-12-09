@@ -5,7 +5,7 @@ import requests
 from datetime import datetime
 from .._segments import OAuthV4Segment
 
-class AmojoAPI:
+class AmojoApiManager:
     def __init__(self, secret, account_id, segment: OAuthV4Segment):
         self.secret = secret
         self.account_id = account_id
